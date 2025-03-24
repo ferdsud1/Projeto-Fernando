@@ -42,6 +42,14 @@ export class ClienteService {
     await this.repo.deletarCliente(id);
     console.log(`Cliente com ID ${id} deletado com sucesso!`);
   }
+  public async verificarContratos(idCliente: number): Promise<any[]> {
+    const result = await this.db.query(
+        "SELECT * FROM contratacoes WHERE id_cliente = $1",
+        [idCliente]
+    );
+    return result.rows;
+}
+
   public async atualizarCliente(
     id: number,
     email?: string,

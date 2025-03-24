@@ -1,6 +1,6 @@
 import promptSync from 'prompt-sync';
 import { ClienteService } from '../service/ClienteService';
-import { error } from 'console';
+
 
 export class ClienteView {
     private clienteService: ClienteService;
@@ -33,40 +33,63 @@ export class ClienteView {
                 const email = this.prompt('Email do Cliente: ');
                 const telefone = this.prompt('Telefone do Cliente: ');
                 const cpf = this.prompt('CPF do Cliente: ');
+                const dataNascimento = this.prompt('Data de nascimento (DD/MM/AAAA): ');
                 const rua_numero = this.prompt('Digite a rua e número: ');
                 const bairro_cidade = this.prompt('Digite o bairro e cidade: ');
-
-                await this.clienteService.inserirClientes(nome, email, telefone, cpf, rua_numero, bairro_cidade);
+            
+                // Validação de idade
+                const [dia, mes, ano] = dataNascimento.split('/').map(Number);
+                const dataNasc = new Date(ano, mes - 1, dia);
+                const hoje = new Date();
+                const idade = hoje.getFullYear() - dataNasc.getFullYear();
+            
+                if (
+                    idade < 18 || 
+                    (idade === 18 && hoje.getMonth() < dataNasc.getMonth()) || 
+                    (idade === 18 && hoje.getMonth() === dataNasc.getMonth() && hoje.getDate() < dataNasc.getDate())
+                ) {
+                    console.log("Erro: Cliente deve ter pelo menos 18 anos para se cadastrar.");
+                    await this.exibirMenu();
+                    break;
+                }
+            
+                await this.clienteService.inserirClientes(nome, email, telefone, cpf, dataNascimento, rua_numero, bairro_cidade);
                 console.log("Cliente inserido com sucesso!");
                 await this.exibirMenu();
                 break;
+            
 
             case '2':
-                try {
-                    console.table(await this.clienteService.listarClientes());
-                } catch (error) {
-                    console.log(error.message);
-
+            try {
+                const clientes = await this.clienteService.listarClientes();
+        
+                if (clientes.length === 0) {
+                    console.log("Nenhum cliente cadastrado.");
+                } else {
+                    console.table(clientes);
                 }
-                await this.exibirMenu();
-                break;
-
+            } catch (error) {
+                console.log("Erro ao listar clientes:", error.message);
+            }
+        
+            await this.exibirMenu();
+            break;
             case '3':
                 const idBusca = this.prompt('ID do Cliente: ');
                 console.log(await this.clienteService.buscarPorId(Number(idBusca)));
                 await this.exibirMenu();
                 break;
 
-            case '4':
-                const idCliente = this.prompt("Digite o ID do cliente que deseja deletar: ");
-                try {
-                    await this.clienteService.deletarCliente(Number(idCliente));
-                    console.log("Cliente deletado com sucesso!");
-                } catch (error) {
-                    console.log(error.message); // Exibe o erro caso o cliente não seja encontrado
-                }
-                await this.exibirMenu();
-                break;
+                case '4':
+                    const idCliente = this.prompt("Digite o ID do cliente que deseja deletar: ");
+                    try {
+                        await this.clienteService.deletarCliente(Number(idCliente));
+                        console.log("Cliente deletado com sucesso!");
+                    } catch (error) {
+                        console.log(error.message); // Exibe o erro caso o cliente não seja encontrado
+                    }
+                    await this.exibirMenu();
+                    break;
 
             case '5':
                 const idAtualiza = Number(this.prompt("Digite o ID do cliente que deseja atualizar: "));
