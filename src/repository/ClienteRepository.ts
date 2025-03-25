@@ -27,14 +27,13 @@ export class ClienteRepository {
     public async buscarPorId(id: number): Promise<CadastroCliente> {
         const query = "SELECT * FROM PROJETO.CADASTROCLIENTES WHERE ID=$1";
         const result = await this.pool.query(query, [id]);
-    
+        if (result.rowCount === 0) {
+            throw new Error(`Nenhum cliente encontrado com o ID ${id}`);
+        }
 
-        //const listarClientes: CadastroCliente[] = [];
-       // for (const row of result.rows) {
            
             const cliente = new CadastroCliente(result.rows[0].nome, result.rows[0].cpf, result.rows[0]. datanascimento, result.rows[0].telefone, result.rows[0].email, result.rows[0].rua_numero,result.rows[0].bairro_cidade,result.rows[0].id);
-         
-       // }
+
 
         return cliente;
     }

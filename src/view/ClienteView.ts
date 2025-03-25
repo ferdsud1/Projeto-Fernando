@@ -103,9 +103,18 @@ export class ClienteView {
     
     private async buscarClientePorId(): Promise<void> {
         const idBusca = this.prompt('ID do Cliente: ');
-        console.log(await this.clienteService.buscarPorId(Number(idBusca)));
+        try {
+            const cliente = await this.clienteService.buscarPorId(Number(idBusca));
+            if (!cliente) {
+                console.log("Cliente não encontrado! Verifique o ID informado e tente novamente.");
+                return;
+            }
+            console.log(cliente);
+        } catch (error) {
+            console.log("Erro ao buscar cliente:", error.message);
+        }
     }
-    
+
     private async deletarCliente(): Promise<void> {
         const idCliente = this.prompt("Digite o ID do cliente que deseja deletar: ");
         try {
