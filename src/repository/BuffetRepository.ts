@@ -17,7 +17,6 @@ export class BuffetRepository {
         return result.rows.map(row => new Buffet(
             row.id_buffet,              // id do buffet
             row.nome_buffet,            // nome do buffet
-           
             row.capacidade,             // capacidade
             row.preco_por_pessoa,       // preço por pessoa
             row.descricao_buffet        // descrição do buffet
@@ -37,7 +36,25 @@ export class BuffetRepository {
         return new Buffet(
             row.id_buffet,          // id do buffet
             row.nome_buffet,        // nome do buffet
-        
+            row.capacidade,         // capacidade
+            row.preco_por_pessoa,   // preço por pessoa
+            row.descricao_buffet    // descrição do buffet
+        );
+    }
+
+    // Método getById, similar ao buscarPorId
+    async getById(id: number): Promise<Buffet | null> {
+        const query = "SELECT * FROM projeto.buffets WHERE id_buffet = $1";
+        const result = await this.pool.query(query, [id]);
+
+        if (result.rowCount === 0) {
+            return null; // Retorna null caso não encontre o buffet
+        }
+
+        const row = result.rows[0];
+        return new Buffet(
+            row.id_buffet,          // id do buffet
+            row.nome_buffet,        // nome do buffet
             row.capacidade,         // capacidade
             row.preco_por_pessoa,   // preço por pessoa
             row.descricao_buffet    // descrição do buffet
@@ -78,7 +95,7 @@ export class BuffetRepository {
     ): Promise<void> {
         const query = `
             UPDATE projeto.buffets
-            SET nome = $1, capacidade = $2, descricao = $3, preco = $4
+            SET nome_buffet = $1, capacidade = $2, descricao_buffet = $3, preco_por_pessoa = $4
             WHERE id_buffet = $5
         `;
         await this.pool.query(query, [nome, capacidade, descricao, preco, id]);

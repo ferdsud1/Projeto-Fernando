@@ -17,7 +17,7 @@ async function main() {
     console.log('3 - Pagamento');
     console.log('4 - Sair');
 
-    const opcao = readlineSync.question('Escolha uma opção: ');
+    const opcao = readlineSync.question('Escolha uma opcao: ');
 
     switch (opcao) {
       case '1':

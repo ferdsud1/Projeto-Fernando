@@ -33,15 +33,16 @@ export class ContratacaoRepository {
     return result.rows[0].id_contratacao;
   }
 
-  // Buscar uma contratação pelo ID
-  public async buscarPorId(id: number): Promise<Contratacao> {
+  // Buscar uma contratação pelo ID (método getById)
+  public async getById(id: number): Promise<Contratacao | null> {
     const query = 'SELECT * FROM projeto.contratacoes WHERE id_contratacao = $1';
     const result = await this.pool.query(query, [id]);
+
     if (result.rowCount === 0) {
-      throw new Error(`Nenhuma contratação encontrada com o ID ${id}`);
+      return null; // Retorna null caso não encontre a contratação
     }
 
-    const row = result.rows[0];
+    const row = result.rows[0];  // Atribuindo diretamente o primeiro elemento
     return new Contratacao(
       row.id_contratacao,
       row.cliente_id,
@@ -59,20 +60,16 @@ export class ContratacaoRepository {
     const query = 'SELECT * FROM projeto.contratacoes';
     const result = await this.pool.query(query);
 
-    const listaContratacoes: Contratacao[] = [];
-    for (const row of result.rows) {
-      const contratacao = new Contratacao(
-        row.id_contratacao,
-        row.cliente_id,
-        row.buffet_id,
-        row.quantidade_pessoas,
-        row.valor_total,
-        row.valor_adiantamento,
-        row.data_evento,
-        row.pago
-      );
-      listaContratacoes.push(contratacao);
-    }
+    const listaContratacoes: Contratacao[] = result.rows.map(row => new Contratacao(
+      row.id_contratacao,
+      row.cliente_id,
+      row.buffet_id,
+      row.quantidade_pessoas,
+      row.valor_total,
+      row.valor_adiantamento,
+      row.data_evento,
+      row.pago
+    ));
 
     return listaContratacoes;
   }
