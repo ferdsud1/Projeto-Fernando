@@ -1,152 +1,199 @@
-import promptSync from 'prompt-sync';
+import inquirer from 'inquirer';
 import { ClienteService } from '../service/ClienteService';
+import { ClienteRepository } from '../repository/ClienteRepository';
+import { CadastroCliente } from '../entity/CadastroCliente';
 
+import chalk from 'chalk';
+import figlet from 'figlet';
+import ora from 'ora';
 
-export class ClienteView {
-    private clienteService: ClienteService;
-    private prompt: any;
+// Instanciando o ClienteRepository e ClienteService
+const clienteRepository = new ClienteRepository();
+const clienteService = new ClienteService();
 
-    constructor() {
-        this.clienteService = new ClienteService();
-        this.prompt = promptSync();
+async function exibirTitulo() {
+  console.clear();
+  console.log(
+    chalk.cyanBright(
+      figlet.textSync('Menu Cliente', {
+        font: 'Standard',
+        horizontalLayout: 'default',
+      })
+    )
+  );
+  console.log(chalk.gray('='.repeat(50)));
+}
+
+export async function menuCliente() {
+  await exibirTitulo();
+
+  const spinner = ora('Carregando menu cliente...').start();
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  spinner.succeed(chalk.green('Menu cliente carregado!'));
+
+  const { opcao } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'opcao',
+      message: chalk.yellowBright('\nEscolha uma opção para o cliente:'),
+      choices: [
+        new inquirer.Separator(chalk.gray('─── Opções Cliente ───')),
+        '📋 Listar clientes',
+        '➕ Cadastrar cliente',
+        '🔍 Buscar cliente por ID',
+        '✏️ Atualizar cliente',
+        '🗑️ Deletar cliente',
+        new inquirer.Separator(),
+        '🚪 Voltar ao menu principal',
+      ],
+    },
+  ]);
+
+  switch (opcao) {
+    case '📋 Listar clientes':
+      await listarClientes();
+      break;
+    case '➕ Cadastrar cliente':
+      await cadastrarCliente();
+      break;
+    case '🔍 Buscar cliente por ID':
+      await buscarClientePorId();
+      break;
+    case '✏️ Atualizar cliente':
+      await atualizarCliente();
+      break;
+    case '🗑️ Deletar cliente':
+      await deletarCliente();
+      break;
+    case '🚪 Voltar ao menu principal':
+      console.log(chalk.cyanBright('\nVoltando ao menu principal...'));
+      return;
+  }
+
+  await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'continuar',
+      message: chalk.cyan('\nPressione Enter para continuar...'),
+    },
+  ]);
+
+  await menuCliente();
+}
+
+// ====================== FUNÇÕES ======================
+
+async function listarClientes() {
+  try {
+    const clientes = await clienteService.listarClientes();
+    if (clientes.length === 0) {
+      console.log(chalk.red('Nenhum cliente cadastrado.'));
+    } else {
+      console.log(chalk.cyanBright('Clientes cadastrados:'));
+      console.table(clientes);
+    }
+  } catch (error) {
+    console.log(chalk.red('Erro ao listar clientes:', error));
+  }
+}
+
+async function cadastrarCliente() {
+  try {
+    const respostas = await inquirer.prompt([
+      { type: 'input', name: 'nome', message: 'Nome do cliente:' },
+      { type: 'input', name: 'cpf', message: 'CPF do cliente:' },
+      { type: 'input', name: 'datanascimento', message: 'Data de nascimento (YYYY-MM-DD):' },
+      { type: 'input', name: 'telefone', message: 'Telefone do cliente:' },
+      { type: 'input', name: 'email', message: 'Email do cliente:' },
+      { type: 'input', name: 'rua_numero', message: 'Rua e número:' },
+      { type: 'input', name: 'bairro_cidade', message: 'Bairro e cidade:' },
+    ]);
+
+    const cliente = new CadastroCliente();
+    cliente.setNome(respostas.nome);
+    cliente.setCpf(respostas.cpf);
+    cliente.setDataNascimento(new Date(respostas.datanascimento));
+    cliente.setTelefone(respostas.telefone);
+    cliente.setEmail(respostas.email);
+    cliente.setRuaNumero(respostas.rua_numero);
+    cliente.setBairroCidade(respostas.bairro_cidade);
+
+    const mensagem = await clienteService.inserirCliente(cliente);
+    console.log(chalk.green(mensagem));
+  } catch (error) {
+    console.log(chalk.red('Erro ao cadastrar cliente:', error));
+  }
+}
+
+async function buscarClientePorId() {
+  try {
+    const { id } = await inquirer.prompt([
+      { type: 'input', name: 'id', message: 'Digite o ID do cliente:' }
+    ]);
+
+    const cliente = await clienteService.buscarPorId(Number(id));
+
+    if (!cliente) {
+      console.log(chalk.red('❌ Cliente não encontrado.'));
+    } else {
+      console.log(chalk.cyanBright('\nCliente encontrado:'));
+      console.table([cliente]);
+    }
+  } catch (error) {
+    console.log(chalk.red('Erro ao buscar cliente por ID:', error));
+  }
+}
+
+async function atualizarCliente() {
+  try {
+    const { id } = await inquirer.prompt([
+      { type: 'input', name: 'id', message: 'Digite o ID do cliente que deseja atualizar:' }
+    ]);
+
+    const clienteExistente = await clienteService.buscarPorId(Number(id));
+    if (!clienteExistente) {
+      console.log(chalk.red('❌ Cliente não encontrado.'));
+      return;
     }
 
-    public async exibirMenu(): Promise<void> {
-        let opcao: string;
-    
-        while (true) {
-            console.log("+--------------------------------+");
-            console.log("|          Cliente Menu          |");
-            console.log("+--------------------------------+");
-            console.log("| 1. Inserir Cliente             |");
-            console.log("| 2. Listar Clientes             |");
-            console.log("| 3. Buscar Cliente por ID       |");
-            console.log("| 4. Deletar Cliente             |");
-            console.log("| 5. Atualizar Cliente           |");
-            console.log("| 0. Sair                        |");
-            console.log("+--------------------------------+");
-    
-            opcao = this.prompt('Escolha uma opção: ');
-    
-            switch (opcao) {
-                case '1':
-                    await this.inserirCliente();
-                    break;
-    
-                case '2':
-                    await this.listarClientes();
-                    break;
-    
-                case '3':
-                    await this.buscarClientePorId();
-                    break;
-    
-                case '4':
-                    await this.deletarCliente();
-                    break;
-    
-                case '5':
-                    await this.atualizarCliente();
-                    break;
-    
-                case '0':
-                    console.log("Saindo...");
-                    return; 
-    
-                default:
-                    console.log("Opção inválida! Tente novamente.");
-            }
-        }
-    }
-    
-    private async inserirCliente(): Promise<void> {
-        const nome = this.prompt('Nome do Cliente: ');
-        const email = this.prompt('Email do Cliente: ');
-        const telefone = this.prompt('Telefone do Cliente: ');
-        const cpf = this.prompt('CPF do Cliente: ');
-        const dataNascimento = this.prompt('Data de nascimento (DD/MM/AAAA): ');
-        const rua_numero = this.prompt('Digite a rua e número: ');
-        const bairro_cidade = this.prompt('Digite o bairro e cidade: ');
-    
-        // Validação de idade
-        const [dia, mes, ano] = dataNascimento.split('/').map(Number);
-        const dataNasc = new Date(ano, mes - 1, dia);
-        const hoje = new Date();
-        const idade = hoje.getFullYear() - dataNasc.getFullYear();
-    
-        if (
-            idade < 18 ||
-            (idade === 18 && hoje.getMonth() < dataNasc.getMonth()) ||
-            (idade === 18 && hoje.getMonth() === dataNasc.getMonth() && hoje.getDate() < dataNasc.getDate())
-        ) {
-            console.log("Erro: Cliente deve ter pelo menos 18 anos para se cadastrar.");
-            return;
-        }
-    
-        await this.clienteService.inserirClientes({ nome, email, telefone, cpf, dataNascimento, rua_numero, bairro_cidade });
-        console.log("Cliente inserido com sucesso!");
-    }
-    
-    private async listarClientes(): Promise<void> {
-        try {
-            const clientes = await this.clienteService.listarClientes();
-    
-            if (clientes.length === 0) {
-                console.log("Nenhum cliente cadastrado.");
-            } else {
-                console.table(clientes);
-            }
-        } catch (error) {
-            console.log("Erro ao listar clientes:", error.message);
-        }
-    }
-    
-    private async buscarClientePorId(): Promise<void> {
-        const idBusca = this.prompt('ID do Cliente: ');
-        try {
-            const cliente = await this.clienteService.buscarPorId(Number(idBusca));
-            if (!cliente) {
-                console.log("Cliente não encontrado! Verifique o ID informado e tente novamente.");
-                return;
-            }
-            console.log(cliente);
-        } catch (error) {
-            console.log("Erro ao buscar cliente:", error.message);
-        }
-    }
+    const respostas = await inquirer.prompt([
+      { type: 'input', name: 'nome', message: `Nome (${clienteExistente.getNome()}):` },
+      { type: 'input', name: 'cpf', message: `CPF (${clienteExistente.getCpf()}):` },
+      { type: 'input', name: 'datanascimento', message: `Data de nascimento (${clienteExistente.getDataNascimento().toISOString().split('T')[0]}):` },
+      { type: 'input', name: 'telefone', message: `Telefone (${clienteExistente.getTelefone()}):` },
+      { type: 'input', name: 'email', message: `Email (${clienteExistente.getEmail()}):` },
+      { type: 'input', name: 'rua_numero', message: `Rua e número (${clienteExistente.getRuaNumero()}):` },
+      { type: 'input', name: 'bairro_cidade', message: `Bairro e cidade (${clienteExistente.getBairroCidade()}):` },
+    ]);
 
-    private async deletarCliente(): Promise<void> {
-        const idCliente = this.prompt("Digite o ID do cliente que deseja deletar: ");
-        try {
-            await this.clienteService.deletarCliente(Number(idCliente));
-            console.log("Cliente deletado com sucesso!");
-        } catch (error) {
-            console.log(error.message); // Exibe o erro caso o cliente não seja encontrado
-        }
-    }
-    
-    private async atualizarCliente(): Promise<void> {
-        const idAtualiza = Number(this.prompt("Digite o ID do cliente que deseja atualizar: "));
-        try {
-            await this.clienteService.buscarPorId(idAtualiza);
-        } catch (error) {
-            console.log("Erro: Cliente não encontrado!");
-            return;
-        }
-    
-        const novoEmail = this.prompt("Novo email (deixe em branco para não alterar): ");
-        const novoTelefone = this.prompt("Novo telefone (deixe em branco para não alterar): ");
-        const novaRuaNumero = this.prompt("Nova rua e número (deixe em branco para não alterar): ");
-        const novoBairroCidade = this.prompt("Novo bairro e cidade (deixe em branco para não alterar): ");
-    
-        await this.clienteService.atualizarCliente(
-            idAtualiza,
-            novoEmail || undefined,
-            novoTelefone || undefined,
-            novaRuaNumero || undefined,
-            novoBairroCidade || undefined
-        );
-    
-        console.log("Cliente atualizado com sucesso!");
-    }
-}    
+    const clienteAtualizado = new CadastroCliente();
+    clienteAtualizado.setId(clienteExistente.getId());
+    clienteAtualizado.setNome(respostas.nome || clienteExistente.getNome());
+    clienteAtualizado.setCpf(respostas.cpf || clienteExistente.getCpf());
+    clienteAtualizado.setDataNascimento(
+      respostas.datanascimento ? new Date(respostas.datanascimento) : clienteExistente.getDataNascimento()
+    );
+    clienteAtualizado.setTelefone(respostas.telefone || clienteExistente.getTelefone());
+    clienteAtualizado.setEmail(respostas.email || clienteExistente.getEmail());
+    clienteAtualizado.setRuaNumero(respostas.rua_numero || clienteExistente.getRuaNumero());
+    clienteAtualizado.setBairroCidade(respostas.bairro_cidade || clienteExistente.getBairroCidade());
+
+    const resultado = await clienteService.atualizarCliente(clienteAtualizado);
+    console.log(chalk.green(resultado));
+  } catch (error) {
+    console.log(chalk.red('Erro ao atualizar cliente:', error));
+  }
+}
+
+async function deletarCliente() {
+  try {
+    const { id } = await inquirer.prompt([
+      { type: 'input', name: 'id', message: 'Digite o ID do cliente que deseja deletar:' }
+    ]);
+
+    const mensagem = await clienteService.deletarCliente(Number(id));
+    console.log(chalk.green(mensagem));
+  } catch (error) {
+    console.log(chalk.red('Erro ao deletar cliente:', error));
+  }
+}

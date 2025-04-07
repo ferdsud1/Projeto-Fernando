@@ -1,89 +1,74 @@
-import { Database } from "./Database";
-import { CadastroCliente } from "../entity/CadastroCliente";
-import { Pool } from "pg";
+import { CadastroCliente } from '../entity/CadastroCliente';
+import { pool } from './Database'; // conexão com o banco
 
 export class ClienteRepository {
-    private pool: Pool;
+  async listarClientes(): Promise<CadastroCliente[]> {
+    const result = await pool.query('SELECT * FROM projeto.cadastroclientes');
+    return result.rows.map(row => {
+      const cliente = new CadastroCliente();
+      cliente.setId(row.id);
+      cliente.setNome(row.nome);
+      cliente.setCpf(row.cpf);
+      cliente.setDataNascimento(new Date(row.datanascimento));
+      cliente.setTelefone(row.telefone);
+      cliente.setEmail(row.email);
+      cliente.setRuaNumero(row.rua_numero);
+      cliente.setBairroCidade(row.bairro_cidade);
+      return cliente;
+    });
+  }
 
-    constructor() {
-        this.pool = Database.iniciarConexao();
-    }
+  async buscarPorId(id: number): Promise<CadastroCliente | null> {
+    const result = await pool.query('SELECT * FROM projeto.cadastroclientes WHERE id = $1', [id]);
+    if (result.rows.length === 0) return null;
 
-    async listarClientes(): Promise<CadastroCliente[]> {
-        const query = "SELECT * FROM PROJETO.CADASTROCLIENTES";
-        const result = await this.pool.query(query);
+    const row = result.rows[0];
+    const cliente = new CadastroCliente();
+    cliente.setId(row.id);
+    cliente.setNome(row.nome);
+    cliente.setCpf(row.cpf);
+    cliente.setDataNascimento(new Date(row.datanascimento));
+    cliente.setTelefone(row.telefone);
+    cliente.setEmail(row.email);
+    cliente.setRuaNumero(row.rua_numero);
+    cliente.setBairroCidade(row.bairro_cidade);
+    return cliente;
+  }
 
-        const listaClientes: CadastroCliente[] = [];
+  async inserirCliente(cliente: CadastroCliente): Promise<void> {
+    await pool.query(`
+      INSERT INTO projeto.cadastroclientes
+      (nome, cpf, datanascimento, telefone, email, rua_numero, bairro_cidade)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [
+      cliente.getNome(),
+      cliente.getCpf(),
+      cliente.getDataNascimento(),
+      cliente.getTelefone(),
+      cliente.getEmail(),
+      cliente.getRuaNumero(),
+      cliente.getBairroCidade()
+    ]);
+  }
 
-        for (const row of result.rows) {
-           // console.log(row)
-            const cliente = new CadastroCliente(row.nome, row.cpf, row.datanascimento, row.telefone, row.email, row.rua_numero, row.bairro_cidade, row.id);
-            listaClientes.push(cliente);
-        }
+  async deletarCliente(id: number): Promise<void> {
+    await pool.query('DELETE FROM projeto.cadastroclientes WHERE id = $1', [id]);
+  }
 
-        return listaClientes;
-    }
-
-    public async buscarPorId(id: number): Promise<CadastroCliente> {
-        const query = "SELECT * FROM PROJETO.CADASTROCLIENTES WHERE ID=$1";
-        const result = await this.pool.query(query, [id]);
-        if (result.rowCount === 0) {
-            throw new Error(`Nenhum cliente encontrado com o ID ${id}`);
-        }
-
-           
-            const cliente = new CadastroCliente(result.rows[0].nome, result.rows[0].cpf, result.rows[0]. datanascimento, result.rows[0].telefone, result.rows[0].email, result.rows[0].rua_numero,result.rows[0].bairro_cidade,result.rows[0].id);
-
-
-        return cliente;
-    }
-
-    public async inserirCliente(
-        nome: string,
-        email: string,
-        telefone: string,
-        cpf: string,
-        dataNascimento: Date,  
-        rua_numero: string,
-        bairro_cidade: string
-    ) {
-
-        const query = "INSERT INTO PROJETO.CADASTROCLIENTES(nome, email, telefone, cpf, dataNascimento, rua_numero, bairro_cidade) VALUES ($1, $2, $3, $4, $5, $6, $7)";
-        
-
-        await this.pool.query(query, [nome, email, telefone, cpf, dataNascimento, rua_numero, bairro_cidade]);
-    }
-    
-    public async deletarCliente(id: number): Promise<void> {
-        const query = `
-            DELETE FROM PROJETO.CADASTROCLIENTES
-            WHERE id = $1
-        `;
-
-        const result = await this.pool.query(query, [id]);
-
-        if (result.rowCount === 0) {
-            throw new Error(`Nenhum cliente encontrado com o ID ${id}`);
-        }
-    }
-
-    public async atualizarCliente(
-        id: number,
-        email: string,
-        telefone: string,
-        rua_numero: string,
-        bairro_cidade: string
-    ): Promise<void> {
-        const query = `
-            UPDATE PROJETO.CADASTROCLIENTES
-            SET email = $1, telefone = $2, rua_numero = $3, bairro_cidade = $4
-            WHERE id = $5
-        `;
-
-        const result = await this.pool.query(query, [email, telefone, rua_numero, bairro_cidade, id]);
-
-        if (result.rowCount === 0) {
-            throw new Error(`Nenhum cliente encontrado com o ID ${id}`);
-        }
-    }
+  async atualizarCliente(cliente: CadastroCliente): Promise<void> {
+    await pool.query(`
+      UPDATE projeto.cadastroclientes SET
+        telefone = $1,
+        email = $2,
+        rua_numero = $3,
+        bairro_cidade = $4
+      WHERE id = $5
+    `, [
+      cliente.getTelefone(),
+      cliente.getEmail(),
+      cliente.getRuaNumero(),
+      cliente.getBairroCidade(),
+      cliente.getId()
+    ]);
+  }
 }

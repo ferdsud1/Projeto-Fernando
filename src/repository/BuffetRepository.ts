@@ -1,103 +1,65 @@
-import { Database } from "./Database";
-import { Buffet } from "../entity/CadastroBuffet";
-import { Pool } from "pg";
+import { Buffet } from '../entity/CadastroBuffet';
+import { pool } from './Database'; // conexão com o banco
 
 export class BuffetRepository {
-    private pool: Pool;
+  async listarBuffets(): Promise<Buffet[]> {
+    const result = await pool.query('SELECT * FROM projeto.buffets');
+    return result.rows.map(row => {
+      return new Buffet(
+        row.id,
+        row.nome_buffet,
+        row.capacidade,
+        row.preco_por_pessoa,
+        row.descricao_buffet
+      );
+    });
+  }
 
-    constructor() {
-        this.pool = Database.iniciarConexao();
-    }
+  async buscarPorId(id: number): Promise<Buffet | null> {
+    const result = await pool.query('SELECT * FROM projeto.buffets WHERE id = $1', [id]);
+    if (result.rows.length === 0) return null;
 
-    // Listar todos os buffets
-    async listarBuffets(): Promise<Buffet[]> {
-        const query = "SELECT * FROM projeto.buffets ORDER BY id_buffet ASC";
-        const result = await this.pool.query(query);
+    const row = result.rows[0];
+    return new Buffet(
+      row.id,
+      row.nome_buffet,
+      row.capacidade,
+      row.preco_por_pessoa,
+      row.descricao_buffet
+    );
+  }
 
-        return result.rows.map(row => new Buffet(
-            row.id_buffet,              // id do buffet
-            row.nome_buffet,            // nome do buffet
-            row.capacidade,             // capacidade
-            row.preco_por_pessoa,       // preço por pessoa
-            row.descricao_buffet        // descrição do buffet
-        ));
-    }
+  async inserirBuffet(buffet: Buffet): Promise<void> {
+    await pool.query(`
+      INSERT INTO projeto.buffets
+      (nome_buffet, capacidade, preco_por_pessoa, descricao_buffet)
+      VALUES ($1, $2, $3, $4)
+    `, [
+      buffet.getNome(),
+      buffet.getCapacidade(),
+      buffet.getPrecoPorPessoa(),
+      buffet.getDescricao()
+    ]);
+  }
 
-    // Buscar buffet pelo ID
-    async buscarPorId(id: number): Promise<Buffet> {
-        const query = "SELECT * FROM projeto.buffets WHERE id_buffet = $1";
-        const result = await this.pool.query(query, [id]);
+  async atualizarBuffet(buffet: Buffet): Promise<void> {
+    await pool.query(`
+      UPDATE projeto.buffets SET
+        nome_buffet = $1,
+        capacidade = $2,
+        preco_por_pessoa = $3,
+        descricao_buffet = $4
+      WHERE id = $5
+    `, [
+      buffet.getNome(),
+      buffet.getCapacidade(),
+      buffet.getPrecoPorPessoa(),
+      buffet.getDescricao(),
+      buffet.getId()
+    ]);
+  }
 
-        if (result.rowCount === 0) {
-            throw new Error(`Nenhum buffet encontrado com o ID ${id}`);
-        }
-
-        const row = result.rows[0];
-        return new Buffet(
-            row.id_buffet,          // id do buffet
-            row.nome_buffet,        // nome do buffet
-            row.capacidade,         // capacidade
-            row.preco_por_pessoa,   // preço por pessoa
-            row.descricao_buffet    // descrição do buffet
-        );
-    }
-
-    // Método getById, similar ao buscarPorId
-    async getById(id: number): Promise<Buffet | null> {
-        const query = "SELECT * FROM projeto.buffets WHERE id_buffet = $1";
-        const result = await this.pool.query(query, [id]);
-
-        if (result.rowCount === 0) {
-            return null; // Retorna null caso não encontre o buffet
-        }
-
-        const row = result.rows[0];
-        return new Buffet(
-            row.id_buffet,          // id do buffet
-            row.nome_buffet,        // nome do buffet
-            row.capacidade,         // capacidade
-            row.preco_por_pessoa,   // preço por pessoa
-            row.descricao_buffet    // descrição do buffet
-        );
-    }
-
-    // Inserir um novo buffet
-    async inserirBuffet(
-        nome: string, 
-        capacidade: number, 
-        descricao: string, 
-        preco: number
-    ): Promise<void> {
-        const query = `
-            INSERT INTO projeto.buffets (nome_buffet, capacidade, descricao_buffet, preco_por_pessoa)
-            VALUES ($1, $2, $3, $4)
-        `;
-        await this.pool.query(query, [nome, capacidade, descricao, preco]);
-    }
-
-    // Deletar um buffet
-    async deletarBuffet(id: number): Promise<void> {
-        const query = "DELETE FROM projeto.buffets WHERE id_buffet = $1";
-        const result = await this.pool.query(query, [id]);
-
-        if (result.rowCount === 0) {
-            throw new Error(`Nenhum buffet encontrado com o ID ${id}`);
-        }
-    }
-
-    // Atualizar buffet
-    async atualizarBuffet(
-        id: number, 
-        nome: string, 
-        capacidade: number, 
-        descricao: string, 
-        preco: number
-    ): Promise<void> {
-        const query = `
-            UPDATE projeto.buffets
-            SET nome_buffet = $1, capacidade = $2, descricao_buffet = $3, preco_por_pessoa = $4
-            WHERE id_buffet = $5
-        `;
-        await this.pool.query(query, [nome, capacidade, descricao, preco, id]);
-    }
+  async deletarBuffet(id: number): Promise<void> {
+    await pool.query('DELETE FROM projeto.buffets WHERE id = $1', [id]);
+  }
 }

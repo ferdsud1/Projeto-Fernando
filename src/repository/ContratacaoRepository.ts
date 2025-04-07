@@ -1,116 +1,86 @@
 import { Pool } from 'pg';
 import { Contratacao } from '../entity/Contratacao';
-import { Database } from './Database';
+
+const pool = new Pool({
+  user: 'seu_usuario',
+  host: 'localhost',
+  database: 'projeto',
+  password: 'sua_senha',
+  port: 5432,
+});
 
 export class ContratacaoRepository {
-  private pool: Pool;
+  async salvar(contratacao: Contratacao): Promise<void> {
+    const query = `
+      INSERT INTO projeto.contratacoes 
+      (id_cliente, id_buffet, quantidade_pessoas, preco_total, data_evento, horario_evento) 
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `;
 
-  constructor() {
-    this.pool = Database.iniciarConexao();
+    const values = [
+      contratacao.id_cliente,
+      contratacao.id_buffet,
+      contratacao.quantidade_pessoas,
+      contratacao.preco_total,
+      contratacao.data_evento,
+      contratacao.horario_evento,
+    ];
+
+    await pool.query(query, values);
   }
 
-  // Criar nova contratação
-  public async inserirContratacao(
-    cliente_id: number,
-    buffet_id: number,
-    quantidade_pessoas: number,
-    valor_total: number,
-    valor_adiantamento: number,
-    data_evento: Date
-  ): Promise<number> {
-    const query = `INSERT INTO projeto.contratacoes (cliente_id, buffet_id, quantidade_pessoas, valor_total, valor_adiantamento, data_evento) 
-                   VALUES ($1, $2, $3, $4, $5, $6) RETURNING id_contratacao`;
+  async listarTodas(): Promise<Contratacao[]> {
+    const resultado = await pool.query('SELECT * FROM projeto.contratacoes');
 
-    const result = await this.pool.query(query, [
-      cliente_id,
-      buffet_id,
-      quantidade_pessoas,
-      valor_total,
-      valor_adiantamento,
-      data_evento,
-    ]);
-
-    return result.rows[0].id_contratacao;
-  }
-
-  // Buscar uma contratação pelo ID (método getById)
-  public async getById(id: number): Promise<Contratacao | null> {
-    const query = 'SELECT * FROM projeto.contratacoes WHERE id_contratacao = $1';
-    const result = await this.pool.query(query, [id]);
-
-    if (result.rowCount === 0) {
-      return null; // Retorna null caso não encontre a contratação
-    }
-
-    const row = result.rows[0];  // Atribuindo diretamente o primeiro elemento
-    return new Contratacao(
-      row.id_contratacao,
-      row.cliente_id,
-      row.buffet_id,
+    return resultado.rows.map(row => new Contratacao(
+      row.id_cliente,
+      row.id_buffet,
       row.quantidade_pessoas,
-      row.valor_total,
-      row.valor_adiantamento,
-      row.data_evento,
-      row.pago
+      row.preco_total,
+      new Date(row.data_evento),
+      row.horario_evento,
+      row.id_contratacoes
+    ));
+  }
+
+  async buscarPorId(id: number): Promise<Contratacao | null> {
+    const resultado = await pool.query(
+      'SELECT * FROM projeto.contratacoes WHERE id_contratacoes = $1',
+      [id]
+    );
+
+    const row = resultado.rows[0];
+    if (!row) return null;
+
+    return new Contratacao(
+      row.id_cliente,
+      row.id_buffet,
+      row.quantidade_pessoas,
+      row.preco_total,
+      new Date(row.data_evento),
+      row.horario_evento,
+      row.id_contratacoes
     );
   }
 
-  // Listar todas as contratações
-  public async listarContratacoes(): Promise<Contratacao[]> {
-    const query = 'SELECT * FROM projeto.contratacoes';
-    const result = await this.pool.query(query);
+  async buscarPorCliente(id_cliente: number): Promise<Contratacao[]> {
+    const resultado = await pool.query(
+      'SELECT * FROM projeto.contratacoes WHERE id_cliente = $1',
+      [id_cliente]
+    );
 
-    const listaContratacoes: Contratacao[] = result.rows.map(row => new Contratacao(
-      row.id_contratacao,
-      row.cliente_id,
-      row.buffet_id,
+    return resultado.rows.map(row => new Contratacao(
+      row.id_cliente,
+      row.id_buffet,
       row.quantidade_pessoas,
-      row.valor_total,
-      row.valor_adiantamento,
-      row.data_evento,
-      row.pago
+      row.preco_total,
+      new Date(row.data_evento),
+      row.horario_evento,
+      row.id_contratacoes
     ));
-
-    return listaContratacoes;
   }
 
-  // Método para atualizar uma contratação
-  public async atualizarContratacao(
-    contratacao: Contratacao
-  ): Promise<void> {
-    const query = `UPDATE projeto.contratacoes SET 
-                   cliente_id = $1, 
-                   buffet_id = $2, 
-                   quantidade_pessoas = $3, 
-                   valor_total = $4, 
-                   valor_adiantamento = $5, 
-                   data_evento = $6, 
-                   pago = $7 
-                   WHERE id_contratacao = $8`;
-
-    const result = await this.pool.query(query, [
-      contratacao.cliente_id,
-      contratacao.buffet_id,
-      contratacao.quantidade_pessoas,
-      contratacao.valor_total,
-      contratacao.valor_adiantamento,
-      contratacao.data_evento,
-      contratacao.pago,
-      contratacao.id_contratacao,
-    ]);
-
-    if (result.rowCount === 0) {
-      throw new Error(`Nenhuma contratação encontrada com o ID ${contratacao.id_contratacao}`);
-    }
-  }
-
-  // Método para deletar uma contratação
-  public async deletarContratacao(id: number): Promise<void> {
-    const query = 'DELETE FROM projeto.contratacoes WHERE id_contratacao = $1';
-    const result = await this.pool.query(query, [id]);
-
-    if (result.rowCount === 0) {
-      throw new Error(`Nenhuma contratação encontrada com o ID ${id}`);
-    }
+  async excluir(id: number): Promise<void> {
+    await pool.query('DELETE FROM projeto.contratacoes WHERE id_contratacoes = $1', [id]);
   }
 }

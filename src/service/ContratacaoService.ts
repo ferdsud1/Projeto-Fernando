@@ -1,26 +1,52 @@
+import { Contratacao } from '../entity/Contratacao';
+import { ContratacaoRepository } from '../repository/ContratacaoRepository';
 import { BuffetRepository } from '../repository/BuffetRepository';
-import { Buffet } from '../entity/CadastroBuffet';  // Garantindo que Buffet seja tipado corretamente
 
 export class ContratacaoService {
-  private buffetRepository = new BuffetRepository();
+  private contratacaoRepo: ContratacaoRepository;
+  private buffetRepo: BuffetRepository;
 
-  // Método para calcular o valor total da contratação
-  async calcularValorTotal(idBuffet: number, numeroPessoas: number): Promise<number> {
-    try {
-      // Obtém os detalhes do buffet selecionado
-      const buffet: Buffet | null = await this.buffetRepository.getById(idBuffet);
+  constructor() {
+    this.contratacaoRepo = new ContratacaoRepository();
+    this.buffetRepo = new BuffetRepository();
+  }
 
-      // Se o buffet não for encontrado, lança um erro
-      if (!buffet) {
-        throw new Error(`Buffet com ID ${idBuffet} não encontrado!`);
-      }
+  async cadastrarContratacao(
+    id_cliente: number,
+    id_buffet: number,
+    quantidade_pessoas: number,
+    data_evento: Date,
+    horario_evento: string
+  ): Promise<void> {
+    const buffet = await this.buffetRepo.buscarPorId(id_buffet); // ajustei também aqui para chamar findById (o nome correto no seu repo)
 
-      // Calcula o valor total de acordo com o número de pessoas e o valor por pessoa
-      return buffet.getPrecoPorPessoa() * numeroPessoas;
-      ;
-    } catch (error) {
-      // Caso haja qualquer erro, o erro é propagado
-      throw new Error(`Erro ao calcular o valor total da contratação: ${error.message}`);
+    if (!buffet) {
+      throw new Error('Buffet não encontrado.');
     }
+
+    const preco_total = buffet.getPrecoPorPessoa() * quantidade_pessoas;
+
+    const novaContratacao = new Contratacao(
+      id_cliente,
+      id_buffet,
+      quantidade_pessoas,
+      preco_total,
+      data_evento,
+      horario_evento
+    );
+
+    await this.contratacaoRepo.salvar(novaContratacao);
+  }
+
+  async listarContratacoes(): Promise<Contratacao[]> {
+    return await this.contratacaoRepo.listarTodas();
+  }
+
+  async buscarPorId(id: number): Promise<Contratacao | null> {
+    return await this.contratacaoRepo.buscarPorId(id);
+  }
+
+  async excluirContratacao(id: number): Promise<void> {
+    await this.contratacaoRepo.excluir(id);
   }
 }

@@ -1,44 +1,47 @@
-// Classe Buffet (exemplo)
 export class Buffet {
-    private id: number;
-    private nome: string;
-    private capacidade: number;
-    private precoPorPessoa: number;
-    private descricao: string;
-  
-    constructor(
-      id: number,
-      nome: string,
-      capacidade: number,
-      precoPorPessoa: number,
-      descricao: string
-    ) {
-      this.id = id;
-      this.nome = nome;
-      this.capacidade = capacidade;
-      this.precoPorPessoa = precoPorPessoa;
-      this.descricao = descricao;
-    }
-  
-    // Métodos para acessar os dados
-    public getId(): number {
-      return this.id;
-    }
-  
-    public getNome(): string {
-      return this.nome;
-    }
-  
-    public getCapacidade(): number {
-      return this.capacidade;
-    }
-  
-    public getPrecoPorPessoa(): number {
-      return this.precoPorPessoa;
-    }
-  
-    public getDescricao(): string {
-      return this.descricao;
-    }
+  constructor(
+    private id: number,
+    private nome: string,
+    private capacidade: number,
+    private precoPorPessoa: number,
+    private descricao: string
+  ) {}
+
+  // Getters
+  getId(): number {
+    return this.id;
   }
-  
+
+  getNome(): string {
+    return this.nome;
+  }
+
+  getCapacidade(): number {
+    return this.capacidade;
+  }
+
+  getPrecoPorPessoa(): number {
+    return this.precoPorPessoa;
+  }
+
+  getDescricao(): string {
+    return this.descricao;
+  }
+
+  // Setters
+  setNome(nome: string): void {
+    this.nome = nome;
+  }
+
+  setCapacidade(capacidade: number): void {
+    this.capacidade = capacidade;
+  }
+
+  setPrecoPorPessoa(preco: number): void {
+    this.precoPorPessoa = preco;
+  }
+
+  setDescricao(descricao: string): void {
+    this.descricao = descricao;
+  }
+}

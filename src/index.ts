@@ -1,44 +1,75 @@
-import * as readlineSync from 'readline-sync';
-import { ClienteView } from './view/ClienteView';
-import { BuffetView } from './view/BuffetView';
-import { PagamentoView } from './view/PagamentoView';
+// index.ts
 
-async function main() {
-  const clienteView = new ClienteView();
-  const buffetView = new BuffetView();
-  const pagamentoView = new PagamentoView();
+import figlet from 'figlet';
+import chalk from 'chalk';
+import inquirer from 'inquirer';
+import ora from 'ora';
 
-  let continuar = true;
+import { menuCliente } from './view/ClienteView';
+import { menuBuffet } from './view/menuBuffetView';
+import { menuContratacao } from './view/menuContratacaoView'; // Novo menu importado
 
-  while (continuar) {
-    console.log('\nMenu Principal:');
-    console.log('1 - Cadastro de Cliente');
-    console.log('2 - Buffets');
-    console.log('3 - Pagamento');
-    console.log('4 - Sair');
-
-    const opcao = readlineSync.question('Escolha uma opcao: ');
-
-    switch (opcao) {
-      case '1':
-        await clienteView.exibirMenu(); // Acessa o menu de Cliente
-        break;
-      case '2':
-        await buffetView.exibirMenu(); // Acessa o menu de Buffet
-        break;
-      case '3':
-        const idBuffet = parseInt(readlineSync.question('Digite o ID do buffet escolhido: '));
-        const numeroPessoas = parseInt(readlineSync.question('Digite o número de pessoas: '));
-        await pagamentoView.exibirPagamento(idBuffet, numeroPessoas); // Acessa o menu de Pagamento
-        break;
-      case '4':
-        continuar = false;
-        console.log('Programa encerrado.');
-        break;
-      default:
-        console.log('Opção inválida. Tente novamente.');
-    }
-  }
+async function exibirTituloPrincipal() {
+  console.clear();
+  console.log(
+    chalk.cyanBright(
+      figlet.textSync('Sistema de Eventos', {
+        font: 'Standard',
+        horizontalLayout: 'default',
+      })
+    )
+  );
+  console.log(chalk.gray('='.repeat(50)));
 }
 
-main();
+async function menuPrincipal() {
+  await exibirTituloPrincipal();
+
+  const spinner = ora('Carregando menu principal...').start();
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  spinner.succeed(chalk.green('Menu principal carregado!'));
+
+  const { opcao } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'opcao',
+      message: chalk.yellowBright('\nEscolha uma opção:'),
+      choices: [
+        new inquirer.Separator(chalk.gray('─── Áreas do Sistema ───')),
+        '👤 Menu Cliente',
+        '🍽️ Menu Buffet',
+        '📅 Menu Contratação',
+        new inquirer.Separator(),
+        '❌ Sair do sistema',
+      ],
+    },
+  ]);
+
+  switch (opcao) {
+    case '👤 Menu Cliente':
+      await menuCliente();
+      break;
+    case '🍽️ Menu Buffet':
+      await menuBuffet();
+      break;
+    case '📅 Menu Contratação':
+      await menuContratacao();
+      break;
+    case '❌ Sair do sistema':
+      console.log(chalk.cyanBright('\nSistema finalizado. Até mais! 👋'));
+      process.exit();
+  }
+
+  await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'voltar',
+      message: chalk.cyan('\nPressione Enter para voltar ao menu principal...'),
+    },
+  ]);
+
+  await menuPrincipal();
+}
+
+// Inicia o sistema
+menuPrincipal();
